@@ -19,10 +19,6 @@ The platform is built using Streamlit for the frontend, Langchain for dynamic co
 - Ensure you have Python 3.12+ on your system
 
 ### Setup Instructions
-- Clone the Repository:
-```
-git clone https://github.com/swetha3456/zenlegacy-api-marketplace.git
-```
 - Install the Dependencies
 ```
 pip install langchain langchain_core langchain_community langchain_ollama streamlit sqlalchemy fastapi uvicorn

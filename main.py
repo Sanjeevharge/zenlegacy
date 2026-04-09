@@ -3,20 +3,20 @@ from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
-from fastapi import FastAPI
-from sqlalchemy import create_engine, Column, Integer, String
+
+from fastapi import FastAPI, HTTPException
+from sqlalchemy import create_engine, Column, Integer, String, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 
 app = FastAPI()
 
-# SQLAlchemy database setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"  # Using SQLite for simplicity
+SQLALCHEMY_DATABASE_URL = "sqlite:///./booklibrary.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
-# Dependency for database session
+
 def get_db():
     db = SessionLocal()
     try:
@@ -24,42 +24,38 @@ def get_db():
     finally:
         db.close()
 
-# SQLAlchemy model
-class Employee(Base):
-    __tablename__ = "employees"
+class Book(Base):
+    __tablename__ = "books"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    email = Column(String, index=True)
-    department = Column(String, index=True)
+    title = Column(String, index=True)
+    author = Column(String, index=True)
+    genre = Column(String, index=True)
+    available_copies = Column(Float)
 
-# Create the database tables
 Base.metadata.create_all(bind=engine)
 
-# Pydantic schema for validation
-class EmployeeBase(BaseModel):
-    name: str
-    email: str
-    department: str
+class BookBase(BaseModel):
+    title: str
+    author: str
+    genre: str
+    available_copies: float
 
-class EmployeeCreate(EmployeeBase):
+class BookCreate(BookBase):
     pass
 
-class EmployeeResponse(EmployeeBase):
+class BookResponse(BookBase):
     id: int
+    class Config:
+        orm_mode = True
 
-class Config:
-    orm_mode = True
-
-# CRUD operations
-@app.post("/employees/", response_model=EmployeeResponse)
-def create_employee(employee: EmployeeCreate, db: Session = get_db()):
-    db_employee = Employee(name=employee.name, email=employee.email, department=employee.department)
-    db.add(db_employee)
+@app.post("/books/", response_model=BookResponse)
+def create_book(book: BookCreate, db: Session = Depends(get_db)):
+    db_book = Book(title=book.title, author=book.author, genre=book.genre, available_copies=book.available_copies)
+    db.add(db_book)
     db.commit()
-    db.refresh(db_employee)
-    return db_employee
+    db.refresh(db_book)
+    return db_book
 
-@app.get("/employees/", response_model=list[EmployeeResponse])
-def read_employees(skip: int = 0, limit: int = 10, db: Session = get_db()):
-    employees = db.query(Employee).offset(skip).limit(limit).all()
-    return employees
+@app.get("/books/", response_model=list[BookResponse])
+def read_books(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+    return db.query(Book).offset(skip).limit(limit).all()
